@@ -1,4 +1,4 @@
-use crate::StorageChange;
+use crate::{StorageChange, MAX_TXS};
 use alloc::vec::Vec;
 use alloy_primitives::StorageKey;
 
@@ -17,7 +17,7 @@ impl SlotChanges {
     /// Preallocates capacity for up to 300,000 changes.
     #[inline]
     pub fn new(slot: StorageKey) -> Self {
-        Self { slot, changes: Vec::with_capacity(300_000) }
+        Self { slot, changes: Vec::with_capacity(MAX_TXS) }
     }
 
     /// Appends a storage change to the list.
