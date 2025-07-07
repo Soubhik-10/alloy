@@ -1,6 +1,7 @@
 //! Contains the `BlockAccessList` struct, which represents a simple list of account changes.
 
 use crate::{account_change::AccountChanges, MAX_ACCOUNTS};
+use alloc::vec::Vec;
 use alloy_rlp::{RlpDecodable, RlpEncodable};
 use serde::{Deserialize, Serialize};
 

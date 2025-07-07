@@ -2,6 +2,7 @@
 //! read for the account. All changes for a single account, grouped by field type.
 //! This eliminates address redundancy across different change types.
 
+use alloc::vec::Vec;
 use alloy_primitives::{Address, StorageKey};
 use alloy_rlp::{RlpDecodable, RlpEncodable};
 use serde::{Deserialize, Serialize};

@@ -2,6 +2,7 @@
 //! Single code change: `tx_index` -> `new_code`
 
 use crate::MAX_CODE_SIZE;
+use alloc::vec::Vec;
 use alloy_primitives::{Bytes, TxIndex};
 use alloy_rlp::{RlpDecodable, RlpEncodable};
 use serde::{Deserialize, Serialize};
