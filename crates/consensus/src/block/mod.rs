@@ -193,6 +193,8 @@ pub struct BlockBody<T, H = Header> {
     pub ommers: Vec<H>,
     /// Block withdrawals.
     pub withdrawals: Option<Withdrawals>,
+    //EIP-7928: Block-level access list
+    // pub block_access_list: Option<BlockAccessList>
 }
 
 impl<T, H> Default for BlockBody<T, H> {

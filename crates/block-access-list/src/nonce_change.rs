@@ -3,9 +3,12 @@
 
 use alloy_primitives::TxIndex;
 use alloy_rlp::{RlpDecodable, RlpEncodable};
+use serde::{Deserialize, Serialize};
 
 /// This struct is used to track the new nonce of accounts in a block.
-#[derive(Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable)]
+#[derive(
+    Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
+)]
 pub struct NonceChange {
     /// The index of the transaction that caused this nonce change.
     pub tx_index: TxIndex,

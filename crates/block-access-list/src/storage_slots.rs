@@ -5,9 +5,12 @@ use crate::{StorageChange, MAX_TXS};
 use alloc::vec::Vec;
 use alloy_primitives::StorageKey;
 use alloy_rlp::{RlpDecodable, RlpEncodable};
+use serde::{Deserialize, Serialize};
 
 /// Represents all changes made to a single storage slot across multiple transactions.
-#[derive(Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable)]
+#[derive(
+    Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
+)]
 pub struct SlotChanges {
     /// The storage slot key being modified.
     pub slot: StorageKey,

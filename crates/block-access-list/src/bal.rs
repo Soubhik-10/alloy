@@ -2,9 +2,12 @@
 
 use crate::{account_change::AccountChanges, MAX_ACCOUNTS};
 use alloy_rlp::{RlpDecodable, RlpEncodable};
+use serde::{Deserialize, Serialize};
 
 /// This struct is used to store `account_changes` in a block.
-#[derive(Debug, Clone, Default, PartialEq, RlpDecodable, RlpEncodable, Eq)]
+#[derive(
+    Debug, Clone, Default, PartialEq, RlpDecodable, RlpEncodable, Eq, Serialize, Deserialize,
+)]
 pub struct BlockAccessList {
     /// List of account changes in the block.
     pub account_changes: Vec<AccountChanges>,
