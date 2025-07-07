@@ -13,6 +13,7 @@ exclude.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-rlp = { workspace = true, features = ["derive"] }
 serde.workspace = true
+arbitrary.workspace = true
 
 [lints]
 workspace = true
