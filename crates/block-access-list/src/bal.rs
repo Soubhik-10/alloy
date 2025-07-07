@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 #[derive(
     Debug, Clone, Default, PartialEq, RlpDecodable, RlpEncodable, Eq, Serialize, Deserialize,
 )]
-#[cfg_attr(any(test,), derive(arbitrary::Arbitrary))]
 pub struct BlockAccessList {
     /// List of account changes in the block.
     pub account_changes: Vec<AccountChanges>,

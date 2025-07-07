@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 #[derive(
     Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
 )]
-#[cfg_attr(any(test,), derive(arbitrary::Arbitrary))]
 pub struct BalanceChange {
     /// The index of the transaction that caused this balance change.
     pub tx_index: TxIndex,

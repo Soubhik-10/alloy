@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 #[derive(
     Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
 )]
-#[cfg_attr(any(test,), derive(arbitrary::Arbitrary))]
 pub struct StorageChange {
     /// Index of the transaction that performed the write.
     pub tx_index: TxIndex,
