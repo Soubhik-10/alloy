@@ -3,22 +3,13 @@
 
 use alloy_primitives::TxIndex;
 use alloy_rlp::{RlpDecodable, RlpEncodable};
-use arbitrary::Arbitrary;
 use serde::{Deserialize, Serialize};
 
 /// This struct is used to track the balance changes of accounts in a block.
 #[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    RlpDecodable,
-    RlpEncodable,
-    Serialize,
-    Deserialize,
-    Arbitrary,
+    Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
 )]
+#[cfg_attr(any(test,), derive(arbitrary::Arbitrary))]
 pub struct BalanceChange {
     /// The index of the transaction that caused this balance change.
     pub tx_index: TxIndex,

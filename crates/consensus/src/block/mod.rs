@@ -381,12 +381,7 @@ where
             .map(|_| H::arbitrary(u))
             .collect::<arbitrary::Result<Vec<_>>>()?;
 
-        Ok(Self {
-            transactions,
-            ommers,
-            withdrawals: u.arbitrary()?,
-            block_access_list: u.arbitrary()?,
-        })
+        Ok(Self { transactions, ommers, withdrawals: u.arbitrary()?, block_access_list: None })
     }
 }
 

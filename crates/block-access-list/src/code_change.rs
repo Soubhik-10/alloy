@@ -4,22 +4,13 @@
 use crate::MAX_CODE_SIZE;
 use alloy_primitives::{Bytes, TxIndex};
 use alloy_rlp::{RlpDecodable, RlpEncodable};
-use arbitrary::Arbitrary;
 use serde::{Deserialize, Serialize};
 
 /// This struct is used to track the new codes of accounts in a block.
 #[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    RlpDecodable,
-    RlpEncodable,
-    Serialize,
-    Deserialize,
-    Arbitrary,
+    Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
 )]
+#[cfg_attr(any(test,), derive(arbitrary::Arbitrary))]
 pub struct CodeChange {
     /// The index of the transaction that caused this balance change.
     pub tx_index: TxIndex,
