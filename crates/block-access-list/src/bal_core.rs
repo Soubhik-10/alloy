@@ -1,5 +1,5 @@
 use alloc::collections::{btree_map::BTreeMap, btree_set::BTreeSet};
-use alloy_primitives::{ map::HashMap, Bytes, StorageKey, StorageValue, TxIndex, U256};
+use alloy_primitives::{map::HashMap, Bytes, StorageKey, StorageValue, TxIndex, U256};
 use serde::{Deserialize, Serialize};
 
 /// `StorageAccess` keeps a record of storage_reads and storage_writes as per Eip-7928
