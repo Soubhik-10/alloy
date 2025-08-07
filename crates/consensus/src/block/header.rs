@@ -128,6 +128,11 @@ pub struct Header {
     /// [EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
     #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
     pub requests_hash: Option<B256>,
+    /// The hash of the block access list, which is a list of account changes in the block.
+    ///
+    /// [Eip-7928]: https://eips.ethereum.org/EIPS/eip-7928
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    pub bal_hash: Option<B256>,
 }
 
 impl AsRef<Self> for Header {
@@ -160,6 +165,7 @@ impl Default for Header {
             excess_blob_gas: None,
             parent_beacon_block_root: None,
             requests_hash: None,
+            bal_hash: None,
         }
     }
 }
@@ -441,6 +447,7 @@ impl Decodable for Header {
             excess_blob_gas: None,
             parent_beacon_block_root: None,
             requests_hash: None,
+            bal_hash: None,
         };
         if started_len - buf.len() < rlp_head.payload_length {
             this.base_fee_per_gas = Some(u64::decode(buf)?);
@@ -546,6 +553,7 @@ impl<'a> arbitrary::Arbitrary<'a> for Header {
             parent_beacon_block_root: u.arbitrary()?,
             requests_hash: u.arbitrary()?,
             withdrawals_root: u.arbitrary()?,
+            bal_hash: u.arbitrary()?,
         };
 
         Ok(generate_valid_header(
