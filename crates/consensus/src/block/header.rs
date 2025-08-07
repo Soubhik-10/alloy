@@ -958,6 +958,8 @@ pub(crate) mod serde_bincode_compat {
         parent_beacon_block_root: Option<B256>,
         #[serde(default)]
         requests_hash: Option<B256>,
+        #[serde(default)]
+        bal_hash: Option<B256>,
         extra_data: Cow<'a, Bytes>,
     }
 
@@ -984,6 +986,7 @@ pub(crate) mod serde_bincode_compat {
                 excess_blob_gas: value.excess_blob_gas,
                 parent_beacon_block_root: value.parent_beacon_block_root,
                 requests_hash: value.requests_hash,
+                bal_hash: value.bal_hash,
                 extra_data: Cow::Borrowed(&value.extra_data),
             }
         }
@@ -1012,6 +1015,7 @@ pub(crate) mod serde_bincode_compat {
                 excess_blob_gas: value.excess_blob_gas,
                 parent_beacon_block_root: value.parent_beacon_block_root,
                 requests_hash: value.requests_hash,
+                bal_hash: value.bal_hash,
                 extra_data: value.extra_data.into_owned(),
             }
         }
