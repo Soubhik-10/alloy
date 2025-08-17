@@ -11,7 +11,7 @@ use crate::BlockAccessIndex;
     Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
 )]
 pub struct NonceChanges {
-    /// The index of the transaction that caused this nonce change.
+    /// The index of bal that stores this nonce change.
     pub block_access_index: BlockAccessIndex,
     /// The new code of the account.
     pub new_nonce: u64,
@@ -23,7 +23,7 @@ impl NonceChanges {
         Self { block_access_index, new_nonce }
     }
 
-    /// Returns the transaction index.
+    /// Returns the bal index.
     pub const fn block_access_index(&self) -> BlockAccessIndex {
         self.block_access_index
     }

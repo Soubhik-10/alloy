@@ -2,9 +2,6 @@
 #![no_std]
 extern crate alloc;
 
-/// Type alias for block index for eip-7928.
-pub type BlockAccessIndex = u16;
-
 /// Module for handling storage changes within a block.
 pub mod storage_change;
 pub use storage_change::*;

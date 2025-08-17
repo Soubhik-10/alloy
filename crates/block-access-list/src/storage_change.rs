@@ -12,7 +12,7 @@ use crate::BlockAccessIndex;
     Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
 )]
 pub struct StorageChange {
-    /// Index of the transaction that performed the write.
+    /// Index of the bal that stores the performed write.
     pub block_access_index: BlockAccessIndex,
     /// The new value written to the storage slot.
     pub new_value: StorageValue,

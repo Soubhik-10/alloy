@@ -12,7 +12,7 @@ use crate::BlockAccessIndex;
     Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
 )]
 pub struct BalanceChanges {
-    /// The index of the transaction that caused this balance change.
+    /// The index of bal that stores balance change.
     pub block_access_index: BlockAccessIndex,
     /// The post-transaction balance of the account.
     pub post_balance: U256,
@@ -24,7 +24,7 @@ impl BalanceChanges {
         Self { block_access_index, post_balance }
     }
 
-    /// Returns the transaction index.
+    /// Returns the bal index.
     #[inline]
     pub const fn block_access_index(&self) -> BlockAccessIndex {
         self.block_access_index
