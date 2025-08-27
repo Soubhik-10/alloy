@@ -863,6 +863,19 @@ impl ssz::Encode for ExecutionPayloadV3 {
     }
 }
 
+/// New payload structure for V4. This is required for EIP-7928
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
+#[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
+pub struct ExecutionPayloadV4 {
+    /// Inner V3 payload
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub payload_inner: ExecutionPayloadV3,
+    /// RLP-encoded block access list as defined in EIP-7928
+    pub block_access_list: Option<Bytes>,
+}
+
 /// This includes all bundled blob related data of an executed payload.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
