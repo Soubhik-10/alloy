@@ -394,14 +394,17 @@ struct BeaconExecutionPayloadV4<'a> {
     /// Inner V3 payload
     #[serde(flatten)]
     payload_inner: BeaconExecutionPayloadV3<'a>,
-    #[serde_as(as = "DisplayFromStr")]
+    /// RLP encoded `block_access_list`
     block_access_list: Cow<'a, Bytes>,
 }
 
 impl<'a> From<BeaconExecutionPayloadV4<'a>> for ExecutionPayloadV4 {
     fn from(payload: BeaconExecutionPayloadV4<'a>) -> Self {
         let BeaconExecutionPayloadV4 { payload_inner, block_access_list } = payload;
-        Self { payload_inner: payload_inner.into(), block_access_list }
+        Self {
+            payload_inner: payload_inner.into(),
+            block_access_list: block_access_list.into_owned(),
+        }
     }
 }
 
