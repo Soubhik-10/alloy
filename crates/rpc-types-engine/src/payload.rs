@@ -873,7 +873,93 @@ pub struct ExecutionPayloadV4 {
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub payload_inner: ExecutionPayloadV3,
     /// RLP-encoded block access list as defined in EIP-7928
-    pub block_access_list: Option<Bytes>,
+    pub block_access_list: Bytes,
+}
+
+impl ExecutionPayloadV4 {
+    /// Converts [`alloy_consensus::Block`] to [`ExecutionPayloadV4`].
+    ///
+    /// See also [`ExecutionPayloadV3::from_block_unchecked`].
+    ///
+    /// Note: This re-calculates the block hash.
+    pub fn from_block_slow<T, H>(block: &Block<T, H>) -> Self
+    where
+        T: Encodable2718,
+        H: BlockHeader + Sealable,
+    {
+        Self::from_block_unchecked(block.hash_slow(), block)
+    }
+
+    /// Converts [`alloy_consensus::Block`] to [`ExecutionPayloadV4`] using the given block hash.
+    ///
+    /// See also [`ExecutionPayloadV3::from_block_unchecked`].
+    pub fn from_block_unchecked<T, H>(block_hash: B256, block: &Block<T, H>) -> Self
+    where
+        T: Encodable2718,
+        H: BlockHeader,
+    {
+        Self {
+            block_access_list: alloy_rlp::encode(block.body.block_access_list.clone().unwrap())
+                .into(),
+            payload_inner: ExecutionPayloadV3::from_block_unchecked(block_hash, block),
+        }
+    }
+
+    /// Returns the withdrawals for the payload.
+    pub const fn withdrawals(&self) -> &Vec<Withdrawal> {
+        &self.payload_inner.payload_inner.withdrawals
+    }
+
+    /// Returns the timestamp for the payload.
+    pub const fn timestamp(&self) -> u64 {
+        self.payload_inner.payload_inner.payload_inner.timestamp
+    }
+
+    /// Converts [`ExecutionPayloadV4`] to [`Block`].
+    ///
+    /// This performs the same conversion as the underlying V3 payload, but inserts the block access
+    /// list.
+    ///
+    /// See also [`ExecutionPayloadV3::try_into_block`].
+    pub fn try_into_block<T: Decodable2718>(self) -> Result<Block<T>, PayloadError> {
+        self.try_into_block_with(|tx| {
+            T::decode_2718_exact(tx.as_ref())
+                .map_err(alloy_rlp::Error::from)
+                .map_err(PayloadError::from)
+        })
+    }
+
+    /// Converts [`ExecutionPayloadV4`] to [`Block`] with a custom transaction mapper.
+    ///
+    /// See also [`ExecutionPayloadV3::try_into_block_with`].
+    pub fn try_into_block_with<T, F, E>(self, f: F) -> Result<Block<T>, PayloadError>
+    where
+        F: FnMut(Bytes) -> Result<T, E>,
+        E: Into<PayloadError>,
+    {
+        self.into_block_raw()?.try_map_transactions(f).map_err(Into::into)
+    }
+
+    /// Converts [`ExecutionPayloadV4`] to [`Block`] with raw [`Bytes`] transactions.
+    ///
+    /// This is similar to [`Self::try_into_block_with`] but returns the transactions as raw bytes
+    /// without any conversion.
+    pub fn into_block_raw(self) -> Result<Block<Bytes>, PayloadError> {
+        let mut base_block = self.payload_inner.into_block_raw()?;
+
+        base_block.body.block_access_list =
+            Some(alloy_rlp::decode_exact(self.block_access_list.as_ref())?);
+
+        Ok(base_block)
+    }
+}
+
+impl<T: Decodable2718> TryFrom<ExecutionPayloadV4> for Block<T> {
+    type Error = PayloadError;
+
+    fn try_from(value: ExecutionPayloadV4) -> Result<Self, Self::Error> {
+        value.try_into_block()
+    }
 }
 
 /// This includes all bundled blob related data of an executed payload.
