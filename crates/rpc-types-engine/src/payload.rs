@@ -1958,6 +1958,18 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                         excess_blob_gas,
                     }));
                 }
+                if let (Some(blob_gas_used), Some(excess_blob_gas), Some(block_access_list)) =
+                    (blob_gas_used, excess_blob_gas, block_access_list)
+                {
+                    return Ok(ExecutionPayload::V4(ExecutionPayloadV4 {
+                        payload_inner: ExecutionPayloadV3 {
+                            payload_inner: ExecutionPayloadV2 { payload_inner: v1, withdrawals },
+                            blob_gas_used,
+                            excess_blob_gas,
+                        },
+                        block_access_list,
+                    }));
+                }
 
                 // reject incomplete V3 payloads even if they could construct a valid V2
                 if blob_gas_used.is_some() || excess_blob_gas.is_some() {
