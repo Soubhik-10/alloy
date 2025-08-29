@@ -261,6 +261,28 @@ pub struct ExecutionPayloadEnvelopeV5 {
     pub execution_requests: Requests,
 }
 
+/// For BAL.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
+#[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
+pub struct ExecutionPayloadEnvelopeV6 {
+    /// Execution payload V4
+    pub execution_payload: ExecutionPayloadV4,
+    /// The expected value to be received by the feeRecipient in wei
+    pub block_value: U256,
+    /// The blobs, commitments, and EIP-7594 style cell proofs associated with the executed
+    /// payload. See also: <https://github.com/ethereum/execution-apis/blob/a091e7c3b6a5748a8843a1a9130d5fbfc3191a2c/src/engine/osaka.md#BlobsBundleV2>.
+    pub blobs_bundle: BlobsBundleV2,
+    /// Introduced in V3, this represents a suggestion from the execution layer if the payload
+    /// should be used instead of an externally provided one.
+    pub should_override_builder: bool,
+    /// A list of opaque [EIP-7685][eip7685] requests.
+    ///
+    /// [eip7685]: https://eips.ethereum.org/EIPS/eip-7685
+    pub execution_requests: Requests,
+}
+
 /// This structure maps on the ExecutionPayload structure of the beacon chain spec.
 ///
 /// See also: <https://github.com/ethereum/execution-apis/blob/6709c2a795b707202e93c4f2867fa0bf2640a84f/src/engine/paris.md#executionpayloadv1>
@@ -1819,7 +1841,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                     BlobGasUsed,
                     ExcessBlobGas,
                     // V4
-                   // BlockAccessList,
+                    BlockAccessList,
                 }
 
                 let mut parent_hash = None;
@@ -1839,7 +1861,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                 let mut withdrawals = None;
                 let mut blob_gas_used = None;
                 let mut excess_blob_gas = None;
-                //let mut block_access_list = None;
+                let mut block_access_list = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -1878,7 +1900,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                             let raw = map.next_value::<U64>()?;
                             excess_blob_gas = Some(raw.to());
                         }
-                       // Fields::BlockAccessList => block_access_list = Some(map.next_value()?),
+                        Fields::BlockAccessList => block_access_list = Some(map.next_value()?),
                     }
                 }
 
@@ -1945,18 +1967,18 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                         excess_blob_gas,
                     }));
                 }
-                // if let (Some(blob_gas_used), Some(excess_blob_gas), Some(block_access_list)) =
-                //     (blob_gas_used, excess_blob_gas, block_access_list)
-                // {
-                //     return Ok(ExecutionPayload::V4(ExecutionPayloadV4 {
-                //         payload_inner: ExecutionPayloadV3 {
-                //             payload_inner: ExecutionPayloadV2 { payload_inner: v1, withdrawals },
-                //             blob_gas_used,
-                //             excess_blob_gas,
-                //         },
-                //         block_access_list,
-                //     }));
-                // }
+                if let (Some(blob_gas_used), Some(excess_blob_gas), Some(block_access_list)) =
+                    (blob_gas_used, excess_blob_gas, block_access_list)
+                {
+                    return Ok(ExecutionPayload::V4(ExecutionPayloadV4 {
+                        payload_inner: ExecutionPayloadV3 {
+                            payload_inner: ExecutionPayloadV2 { payload_inner: v1, withdrawals },
+                            blob_gas_used,
+                            excess_blob_gas,
+                        },
+                        block_access_list,
+                    }));
+                }
 
                 // reject incomplete V3 payloads even if they could construct a valid V2
                 if blob_gas_used.is_some() || excess_blob_gas.is_some() {
@@ -1985,7 +2007,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
             "withdrawals",
             "blobGasUsed",
             "excessBlobGas",
-           // "blockAccessList",
+            "blockAccessList",
         ];
         deserializer.deserialize_struct("ExecutionPayload", FIELDS, ExecutionPayloadVisitor)
     }
