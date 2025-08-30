@@ -1444,12 +1444,18 @@ impl ExecutionPayload {
         T: Encodable2718 + Transaction,
         H: BlockHeader,
     {
+        let empty_bal_hash: B256 = alloy_primitives::b256!(
+            "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"
+        );
+
         let sidecar = ExecutionPayloadSidecar::from_block(block);
 
-        let execution_payload = /*if block.header.block_access_list_hash().is_some() {
+        let execution_payload = if block.header.block_access_list_hash().is_some()
+            && block.header.block_access_list_hash().unwrap() != empty_bal_hash
+        {
             // block with block access list: V4
             Self::V4(ExecutionPayloadV4::from_block_unchecked(block_hash, block))
-        } else*/ if block.header.parent_beacon_block_root().is_some() {
+        } else if block.header.parent_beacon_block_root().is_some() {
             // block with parent beacon block root: V3
             Self::V3(ExecutionPayloadV3::from_block_unchecked(block_hash, block))
         } else if block.body.withdrawals.is_some() {
