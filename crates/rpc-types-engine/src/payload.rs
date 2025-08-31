@@ -1633,6 +1633,30 @@ impl ExecutionPayload {
         }
     }
 
+    /// Returns a reference to the V4 payload, if any.
+    pub const fn as_v4(&self) -> Option<&ExecutionPayloadV4> {
+        match self {
+            Self::V1(_) | Self::V2(_) | Self::V3(_) => None,
+            Self::V4(payload) => Some(payload),
+        }
+    }
+
+    /// Returns a mutable reference to the V4 payload, if any.
+    pub const fn as_v4_mut(&mut self) -> Option<&mut ExecutionPayloadV4> {
+        match self {
+            Self::V1(_) | Self::V2(_) | Self::V3(_) => None,
+            Self::V4(payload) => Some(payload),
+        }
+    }
+
+    /// Returns the block access list if V4
+    pub const fn block_access_list(&mut self) -> Option<&Bytes> {
+        match self.as_v4() {
+            Some(payload) => Some(&payload.block_access_list),
+            None => None,
+        }
+    }
+
     /// Returns the withdrawals for the payload.
     pub const fn withdrawals(&self) -> Option<&Vec<Withdrawal>> {
         match self.as_v2() {
