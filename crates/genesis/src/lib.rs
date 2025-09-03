@@ -452,7 +452,7 @@ pub mod serde_bincode_compat {
     };
     use alloy_primitives::{Address, U256};
     use alloy_serde::OtherFields;
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use serde::{de::value, Deserialize, Deserializer, Serialize, Serializer};
     use serde_with::{DeserializeAs, SerializeAs};
 
     /// Bincode-compatible [`super::ChainConfig`] serde implementation.
@@ -514,6 +514,8 @@ pub mod serde_bincode_compat {
         #[serde(default)]
         osaka_time: Option<u64>,
         #[serde(default)]
+        amsterdam_time: Option<u64>,
+        #[serde(default)]
         bpo1_time: Option<u64>,
         #[serde(default)]
         bpo2_time: Option<u64>,
@@ -566,6 +568,7 @@ pub mod serde_bincode_compat {
                 cancun_time: value.cancun_time,
                 prague_time: value.prague_time,
                 osaka_time: value.osaka_time,
+                amsterdam_time: value.amsterdam_time,
                 bpo1_time: value.bpo1_time,
                 bpo2_time: value.bpo2_time,
                 bpo3_time: value.bpo3_time,
@@ -614,6 +617,7 @@ pub mod serde_bincode_compat {
                 cancun_time: value.cancun_time,
                 prague_time: value.prague_time,
                 osaka_time: value.osaka_time,
+                amsterdam_time: value.amsterdam_time,
                 bpo1_time: value.bpo1_time,
                 bpo2_time: value.bpo2_time,
                 bpo3_time: value.bpo3_time,
@@ -698,6 +702,7 @@ pub mod serde_bincode_compat {
                 cancun_time: None,
                 prague_time: None,
                 osaka_time: None,
+                amsterdam_time: None,
                 bpo1_time: None,
                 bpo2_time: None,
                 bpo3_time: None,
@@ -754,6 +759,7 @@ pub mod serde_bincode_compat {
                 cancun_time: None,
                 prague_time: None,
                 osaka_time: None,
+                amsterdam_time: None,
                 bpo1_time: None,
                 bpo2_time: None,
                 bpo3_time: None,
