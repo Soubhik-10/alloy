@@ -383,6 +383,10 @@ pub struct ChainConfig {
     #[serde(skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_u64_opt")]
     pub osaka_time: Option<u64>,
 
+    /// Amsterdam switch time (None = no fork, 0 = already on osaka).
+    #[serde(skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_u64_opt")]
+    pub amsterdam_time: Option<u64>,
+
     /// BPO1 switch time (None = no fork, 0 = already on BPO1).
     #[serde(skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_u64_opt")]
     pub bpo1_time: Option<u64>,
@@ -1026,6 +1030,7 @@ impl Default for ChainConfig {
             cancun_time: None,
             prague_time: None,
             osaka_time: None,
+            amsterdam_time: None,
             bpo1_time: None,
             bpo2_time: None,
             bpo3_time: None,
