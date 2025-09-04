@@ -9,7 +9,16 @@ use serde::{Deserialize, Serialize};
 
 /// Represents all changes made to a single storage slot across multiple transactions.
 #[derive(
-    Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
+    Debug,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    RlpDecodable,
+    RlpEncodable,
+    Serialize,
+    Deserialize,
+    arbitrary::Arbitrary,
 )]
 pub struct SlotChanges {
     /// The storage slot key being modified.

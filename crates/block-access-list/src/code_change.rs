@@ -8,7 +8,16 @@ use crate::BlockAccessIndex;
 
 /// This struct is used to track the new codes of accounts in a block.
 #[derive(
-    Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
+    Debug,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    RlpDecodable,
+    RlpEncodable,
+    Serialize,
+    Deserialize,
+    arbitrary::Arbitrary,
 )]
 pub struct CodeChange {
     /// The index of bal that stores this code change.
