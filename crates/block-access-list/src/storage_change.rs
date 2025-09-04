@@ -9,17 +9,9 @@ use crate::BlockAccessIndex;
 
 /// Represents a single storage write operation within a transaction.
 #[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    RlpDecodable,
-    RlpEncodable,
-    Serialize,
-    Deserialize,
-    arbitrary::Arbitrary,
+    Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
 )]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct StorageChange {
     /// Index of the bal that stores the performed write.
     pub block_access_index: BlockAccessIndex,

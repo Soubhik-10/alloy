@@ -5,7 +5,6 @@
 use alloc::vec::Vec;
 use alloy_primitives::{Address, StorageKey};
 use alloy_rlp::{RlpDecodable, RlpEncodable};
-use arbitrary::Arbitrary;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -15,17 +14,9 @@ use crate::{
 
 /// This struct is used to track the changes across accounts in a block.
 #[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    RlpDecodable,
-    RlpEncodable,
-    Serialize,
-    Deserialize,
-    Arbitrary,
+    Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
 )]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct AccountChanges {
     /// The address of the account whose changes are stored.
     pub address: Address,

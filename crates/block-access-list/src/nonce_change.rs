@@ -8,17 +8,9 @@ use crate::BlockAccessIndex;
 
 /// This struct is used to track the new nonce of accounts in a block.
 #[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    RlpDecodable,
-    RlpEncodable,
-    Serialize,
-    Deserialize,
-    arbitrary::Arbitrary,
+    Debug, Clone, Default, PartialEq, Eq, RlpDecodable, RlpEncodable, Serialize, Deserialize,
 )]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct NonceChange {
     /// The index of bal that stores this nonce change.
     pub block_access_index: BlockAccessIndex,
