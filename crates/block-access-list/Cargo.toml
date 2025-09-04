@@ -22,4 +22,4 @@ workspace = true
 [features]
 default = ["std"]
 std = ["alloy-primitives/std", "serde/std"]
-arbitrary = ["std", "dep:rand", "dep:arbitrary"]
+arbitrary = ["std", "dep:rand", "dep:arbitrary", "alloy-primitives/arbitrary"]
