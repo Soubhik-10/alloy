@@ -383,7 +383,7 @@ pub struct ChainConfig {
     #[serde(skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_u64_opt")]
     pub osaka_time: Option<u64>,
 
-    /// Amsterdam switch time (None = no fork, 0 = already on osaka).
+    /// Amsterdam switch time (None = no fork, 0 = already on amsterdam).
     #[serde(skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_u64_opt")]
     pub amsterdam_time: Option<u64>,
 
