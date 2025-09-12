@@ -1,7 +1,7 @@
 //! Block-related consensus types.
 
 mod header;
-use alloy_block_access_list::BlockAccessList;
+use alloy_eips::eip7928::BlockAccessList;
 pub use header::{BlockHeader, Header};
 
 mod traits;
