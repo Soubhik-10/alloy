@@ -296,7 +296,7 @@ impl<T, H> BlockBody<T, H> {
     }
 
     /// Returns the block access list for the block, if available.
-    pub fn block_access_list(&self) -> &Option<BlockAccessList> {
+    pub const fn block_access_list(&self) -> &Option<BlockAccessList> {
         &self.block_access_list
     }
 }
