@@ -328,7 +328,8 @@ impl ExecutionPayloadV1 {
         self.into_block_raw()?.try_map_transactions(f).map_err(Into::into)
     }
 
-    /// Helper fn that accepts the seperately canculated hash to convert [`ExecutionPayloadV1`] to [`Block`]
+    /// Helper fn that accepts the separately canculated hash to convert [`ExecutionPayloadV1`] to
+    /// [`Block`]
     pub fn try_into_block_with_tx_root(
         self,
         transactions_root: Option<B256>,
