@@ -37,7 +37,10 @@ mod nonce;
 pub use nonce::{CachedNonceManager, NonceFiller, NonceManager, SimpleNonceManager};
 
 mod gas;
-pub use gas::{BlobGasFiller, GasFillable, GasFiller};
+pub use gas::{
+    BlobGasEstimator, BlobGasEstimatorFn, BlobGasEstimatorFunction, BlobGasFiller, GasFillable,
+    GasFiller,
+};
 
 mod join_fill;
 pub use join_fill::JoinFill;
@@ -314,6 +317,26 @@ where
         Self { inner, filler, _pd: PhantomData }
     }
 
+    /// Returns a reference to the filler.
+    pub const fn filler(&self) -> &F {
+        &self.filler
+    }
+
+    /// Returns a mutable reference to the filler.
+    pub const fn filler_mut(&mut self) -> &mut F {
+        &mut self.filler
+    }
+
+    /// Returns a reference to the inner provider.
+    pub const fn inner(&self) -> &P {
+        &self.inner
+    }
+
+    /// Returns a mutable reference to the inner provider.
+    pub const fn inner_mut(&mut self) -> &mut P {
+        &mut self.inner
+    }
+
     /// Joins a filler to this provider
     pub fn join_with<Other: TxFiller<N>>(
         self,
@@ -473,7 +496,7 @@ where
         self.inner.get_account_info(address)
     }
 
-    fn get_account(&self, address: Address) -> RpcWithBlock<Address, alloy_consensus::Account> {
+    fn get_account(&self, address: Address) -> RpcWithBlock<Address, alloy_consensus::TrieAccount> {
         self.inner.get_account(address)
     }
 

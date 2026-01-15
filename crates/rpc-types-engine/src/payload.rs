@@ -261,6 +261,108 @@ pub struct ExecutionPayloadEnvelopeV5 {
     pub execution_requests: Requests,
 }
 
+impl ExecutionPayloadEnvelopeV4 {
+    /// Converts this V4 envelope into a [`ExecutionPayloadEnvelopeV5`] by computing EIP-7594
+    /// cell proofs for the blobs bundle.
+    ///
+    /// This uses the default KZG settings. See [`Self::try_into_v5_with_settings`] for custom
+    /// settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if KZG proof computation fails.
+    #[cfg(feature = "kzg")]
+    pub fn try_into_v5(
+        self,
+    ) -> Result<ExecutionPayloadEnvelopeV5, alloy_eips::eip4844::c_kzg::Error> {
+        self.try_into_v5_with_settings(
+            alloy_eips::eip4844::env_settings::EnvKzgSettings::Default.get(),
+        )
+    }
+
+    /// Converts this V4 envelope into a [`ExecutionPayloadEnvelopeV5`] by computing EIP-7594
+    /// cell proofs for the blobs bundle using the provided KZG settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if KZG proof computation fails.
+    #[cfg(feature = "kzg")]
+    pub fn try_into_v5_with_settings(
+        self,
+        settings: &alloy_eips::eip4844::c_kzg::KzgSettings,
+    ) -> Result<ExecutionPayloadEnvelopeV5, alloy_eips::eip4844::c_kzg::Error> {
+        let blobs_bundle = self.envelope_inner.blobs_bundle.try_into_v2_with_settings(settings)?;
+        Ok(ExecutionPayloadEnvelopeV5 {
+            execution_payload: self.envelope_inner.execution_payload,
+            block_value: self.envelope_inner.block_value,
+            blobs_bundle,
+            should_override_builder: self.envelope_inner.should_override_builder,
+            execution_requests: self.execution_requests,
+        })
+    }
+}
+
+#[cfg(feature = "kzg")]
+impl TryFrom<ExecutionPayloadEnvelopeV4> for ExecutionPayloadEnvelopeV5 {
+    type Error = alloy_eips::eip4844::c_kzg::Error;
+
+    fn try_from(value: ExecutionPayloadEnvelopeV4) -> Result<Self, Self::Error> {
+        value.try_into_v5()
+    }
+}
+
+impl ExecutionPayloadEnvelopeV5 {
+    /// Converts this V5 envelope into a [`ExecutionPayloadEnvelopeV4`] by computing EIP-4844
+    /// blob proofs for the blobs bundle.
+    ///
+    /// This uses the default KZG settings. See [`Self::try_into_v4_with_settings`] for custom
+    /// settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if KZG proof computation fails.
+    #[cfg(feature = "kzg")]
+    pub fn try_into_v4(
+        self,
+    ) -> Result<ExecutionPayloadEnvelopeV4, alloy_eips::eip4844::c_kzg::Error> {
+        self.try_into_v4_with_settings(
+            alloy_eips::eip4844::env_settings::EnvKzgSettings::Default.get(),
+        )
+    }
+
+    /// Converts this V5 envelope into a [`ExecutionPayloadEnvelopeV4`] by computing EIP-4844
+    /// blob proofs for the blobs bundle using the provided KZG settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if KZG proof computation fails.
+    #[cfg(feature = "kzg")]
+    pub fn try_into_v4_with_settings(
+        self,
+        settings: &alloy_eips::eip4844::c_kzg::KzgSettings,
+    ) -> Result<ExecutionPayloadEnvelopeV4, alloy_eips::eip4844::c_kzg::Error> {
+        let blobs_bundle = self.blobs_bundle.try_into_v1_with_settings(settings)?;
+        Ok(ExecutionPayloadEnvelopeV4 {
+            envelope_inner: ExecutionPayloadEnvelopeV3 {
+                execution_payload: self.execution_payload,
+                block_value: self.block_value,
+                blobs_bundle,
+                should_override_builder: self.should_override_builder,
+            },
+            execution_requests: self.execution_requests,
+        })
+    }
+}
+
+#[cfg(feature = "kzg")]
+impl TryFrom<ExecutionPayloadEnvelopeV5> for ExecutionPayloadEnvelopeV4 {
+    type Error = alloy_eips::eip4844::c_kzg::Error;
+
+    fn try_from(value: ExecutionPayloadEnvelopeV5) -> Result<Self, Self::Error> {
+        value.try_into_v4()
+    }
+}
+
 /// For BAL.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -2174,6 +2276,9 @@ pub struct PayloadAttributes {
     /// See also <https://github.com/ethereum/execution-apis/blob/main/src/engine/cancun.md#payloadattributesv3>
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub parent_beacon_block_root: Option<B256>,
+    /// Slot of the current block anabled with Amsterdam fork
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub slot_number: Option<u64>,
 }
 
 /// This structure contains the result of processing a payload or fork choice update.
