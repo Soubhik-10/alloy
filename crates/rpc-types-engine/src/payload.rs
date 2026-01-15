@@ -1297,6 +1297,58 @@ impl BlobsBundleV1 {
         let Self { commitments, proofs, blobs } = self;
         Ok(BlobTransactionSidecar { blobs, commitments, proofs })
     }
+
+    /// Converts this V1 bundle into a [`BlobsBundleV2`] by computing EIP-7594 cell proofs.
+    ///
+    /// This uses the default KZG settings. See [`Self::try_into_v2_with_settings`] for custom
+    /// settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the bundle has mismatched lengths or if KZG proof computation fails.
+    #[cfg(feature = "kzg")]
+    pub fn try_into_v2(self) -> Result<BlobsBundleV2, alloy_eips::eip4844::c_kzg::Error> {
+        self.try_into_v2_with_settings(
+            alloy_eips::eip4844::env_settings::EnvKzgSettings::Default.get(),
+        )
+    }
+
+    /// Converts this V1 bundle into a [`BlobsBundleV2`] by computing EIP-7594 cell proofs
+    /// using the provided KZG settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the bundle has mismatched lengths or if KZG proof computation fails.
+    #[cfg(feature = "kzg")]
+    pub fn try_into_v2_with_settings(
+        self,
+        settings: &alloy_eips::eip4844::c_kzg::KzgSettings,
+    ) -> Result<BlobsBundleV2, alloy_eips::eip4844::c_kzg::Error> {
+        use alloy_eips::eip7594::CELLS_PER_EXT_BLOB;
+
+        let mut cell_proofs = Vec::with_capacity(self.blobs.len() * CELLS_PER_EXT_BLOB);
+
+        for blob in self.blobs.iter() {
+            // SAFETY: Blob and alloy_eips::eip4844::c_kzg::Blob have the same memory layout
+            let blob_kzg =
+                unsafe { core::mem::transmute::<&Blob, &alloy_eips::eip4844::c_kzg::Blob>(blob) };
+
+            // Compute cells and their KZG proofs for this blob
+            let (_cells, kzg_proofs) = settings.compute_cells_and_kzg_proofs(blob_kzg)?;
+
+            // SAFETY: same size
+            unsafe {
+                for kzg_proof in kzg_proofs.iter() {
+                    cell_proofs.push(core::mem::transmute::<
+                        alloy_eips::eip4844::c_kzg::Bytes48,
+                        Bytes48,
+                    >(kzg_proof.to_bytes()));
+                }
+            }
+        }
+
+        Ok(BlobsBundleV2 { commitments: self.commitments, proofs: cell_proofs, blobs: self.blobs })
+    }
 }
 
 impl From<Vec<BlobTransactionSidecar>> for BlobsBundleV1 {
@@ -1477,6 +1529,59 @@ impl BlobsBundleV2 {
 
         let Self { commitments, proofs, blobs } = self;
         Ok(BlobTransactionSidecarEip7594 { blobs, commitments, cell_proofs: proofs })
+    }
+
+    /// Converts this V2 bundle into a [`BlobsBundleV1`] by computing EIP-4844 blob proofs.
+    ///
+    /// This uses the default KZG settings. See [`Self::try_into_v1_with_settings`] for custom
+    /// settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if KZG proof computation fails.
+    #[cfg(feature = "kzg")]
+    pub fn try_into_v1(self) -> Result<BlobsBundleV1, alloy_eips::eip4844::c_kzg::Error> {
+        self.try_into_v1_with_settings(
+            alloy_eips::eip4844::env_settings::EnvKzgSettings::Default.get(),
+        )
+    }
+
+    /// Converts this V2 bundle into a [`BlobsBundleV1`] by computing EIP-4844 blob proofs
+    /// using the provided KZG settings.
+    ///
+    /// This recomputes the blob proofs from the blobs and commitments. The cell proofs from
+    /// V2 are discarded as they are not used in V1.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if KZG proof computation fails.
+    #[cfg(feature = "kzg")]
+    pub fn try_into_v1_with_settings(
+        self,
+        settings: &alloy_eips::eip4844::c_kzg::KzgSettings,
+    ) -> Result<BlobsBundleV1, alloy_eips::eip4844::c_kzg::Error> {
+        let mut proofs = Vec::with_capacity(self.blobs.len());
+
+        for (blob, commitment) in self.blobs.iter().zip(self.commitments.iter()) {
+            // SAFETY: Blob and alloy_eips::eip4844::c_kzg::Blob have the same memory layout
+            let blob_kzg =
+                unsafe { core::mem::transmute::<&Blob, &alloy_eips::eip4844::c_kzg::Blob>(blob) };
+            let commitment_kzg = unsafe {
+                core::mem::transmute::<&Bytes48, &alloy_eips::eip4844::c_kzg::Bytes48>(commitment)
+            };
+
+            // Compute the blob proof
+            let proof = settings.compute_blob_kzg_proof(blob_kzg, commitment_kzg)?;
+
+            // SAFETY: same size
+            unsafe {
+                proofs.push(core::mem::transmute::<alloy_eips::eip4844::c_kzg::Bytes48, Bytes48>(
+                    proof.to_bytes(),
+                ));
+            }
+        }
+
+        Ok(BlobsBundleV1 { commitments: self.commitments, proofs, blobs: self.blobs })
     }
 }
 
