@@ -1256,6 +1256,14 @@ impl BlobsBundleV1 {
         Self::default()
     }
 
+    /// Computes the versioned hashes from the KZG commitments.
+    pub fn versioned_hashes(&self) -> Vec<B256> {
+        self.commitments
+            .iter()
+            .map(|c| alloy_eips::eip4844::kzg_to_versioned_hash(c.as_slice()))
+            .collect()
+    }
+
     /// Take `len` blob data from the bundle.
     ///
     /// # Panics
@@ -1471,6 +1479,14 @@ impl BlobsBundleV2 {
     /// payload for API compatibility reasons.
     pub fn empty() -> Self {
         Self::default()
+    }
+
+    /// Computes the versioned hashes from the KZG commitments.
+    pub fn versioned_hashes(&self) -> Vec<B256> {
+        self.commitments
+            .iter()
+            .map(|c| alloy_eips::eip4844::kzg_to_versioned_hash(c.as_slice()))
+            .collect()
     }
 
     /// Take `len` blob data from the bundle.
@@ -2381,9 +2397,6 @@ pub struct PayloadAttributes {
     /// See also <https://github.com/ethereum/execution-apis/blob/main/src/engine/cancun.md#payloadattributesv3>
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub parent_beacon_block_root: Option<B256>,
-    /// Slot of the current block anabled with Amsterdam fork
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub slot_number: Option<u64>,
 }
 
 /// This structure contains the result of processing a payload or fork choice update.
