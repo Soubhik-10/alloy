@@ -18,7 +18,6 @@ use alloy_eips::{
     eip7594::{BlobTransactionSidecarEip7594, CELLS_PER_EXT_BLOB},
     eip7685::Requests,
     eip7840::BlobParams,
-    eip7928::BlockAccessList,
     BlockNumHash,
 };
 use alloy_primitives::{bytes::BufMut, Address, Bloom, Bytes, Sealable, B256, B64, U256};
@@ -1017,14 +1016,14 @@ impl ExecutionPayloadV4 {
     pub fn from_block_unchecked_with_bal<T, H>(
         block_hash: B256,
         block: &Block<T, H>,
-        bal: BlockAccessList,
+        bal: Bytes,
     ) -> Self
     where
         T: Encodable2718,
         H: BlockHeader,
     {
         Self {
-            block_access_list: alloy_rlp::encode(bal).into(),
+            block_access_list: bal,
             payload_inner: ExecutionPayloadV3::from_block_unchecked(block_hash, block),
         }
     }
@@ -1706,7 +1705,7 @@ impl ExecutionPayload {
     pub fn from_block_unchecked_with_bal<T, H>(
         block_hash: B256,
         block: &Block<T, H>,
-        bal: BlockAccessList,
+        bal: Bytes,
     ) -> (Self, ExecutionPayloadSidecar)
     where
         T: Encodable2718 + Transaction,
