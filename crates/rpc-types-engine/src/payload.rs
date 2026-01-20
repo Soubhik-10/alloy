@@ -18,6 +18,7 @@ use alloy_eips::{
     eip7594::{BlobTransactionSidecarEip7594, CELLS_PER_EXT_BLOB},
     eip7685::Requests,
     eip7840::BlobParams,
+    eip7928::BlockAccessList,
     BlockNumHash,
 };
 use alloy_primitives::{bytes::BufMut, Address, Bloom, Bytes, Sealable, B256, B64, U256};
@@ -503,12 +504,7 @@ impl ExecutionPayloadV1 {
 
         Ok(Block {
             header,
-            body: BlockBody {
-                transactions: self.transactions,
-                ommers: vec![],
-                withdrawals: None,
-                block_access_list: None,
-            },
+            body: BlockBody { transactions: self.transactions, ommers: vec![], withdrawals: None },
         })
     }
 
@@ -1014,6 +1010,25 @@ impl ExecutionPayloadV4 {
         Self::from_block_unchecked(block.hash_slow(), block)
     }
 
+    /// Converts [`alloy_consensus::Block`] to [`ExecutionPayloadV4`] using the given block hash and
+    /// Bal.
+    ///
+    /// See also [`ExecutionPayloadV3::from_block_unchecked`].
+    pub fn from_block_unchecked_with_bal<T, H>(
+        block_hash: B256,
+        block: &Block<T, H>,
+        bal: BlockAccessList,
+    ) -> Self
+    where
+        T: Encodable2718,
+        H: BlockHeader,
+    {
+        Self {
+            block_access_list: alloy_rlp::encode(bal).into(),
+            payload_inner: ExecutionPayloadV3::from_block_unchecked(block_hash, block),
+        }
+    }
+
     /// Converts [`alloy_consensus::Block`] to [`ExecutionPayloadV4`] using the given block hash.
     ///
     /// See also [`ExecutionPayloadV3::from_block_unchecked`].
@@ -1023,8 +1038,7 @@ impl ExecutionPayloadV4 {
         H: BlockHeader,
     {
         Self {
-            block_access_list: alloy_rlp::encode(block.body.block_access_list.clone().unwrap())
-                .into(),
+            block_access_list: Default::default(),
             payload_inner: ExecutionPayloadV3::from_block_unchecked(block_hash, block),
         }
     }
@@ -1070,9 +1084,6 @@ impl ExecutionPayloadV4 {
     /// without any conversion.
     pub fn into_block_raw(self) -> Result<Block<Bytes>, PayloadError> {
         let mut base_block = self.payload_inner.into_block_raw()?;
-
-        base_block.body.block_access_list =
-            Some(alloy_rlp::decode_exact(self.block_access_list.as_ref())?);
 
         base_block.header.block_access_list_hash =
             Some(alloy_primitives::keccak256(self.block_access_list.as_ref()));
@@ -1673,6 +1684,39 @@ impl ExecutionPayload {
         let execution_payload = if block.header.block_access_list_hash().is_some() {
             // block with block access list: V4
             Self::V4(ExecutionPayloadV4::from_block_unchecked(block_hash, block))
+        } else if block.header.parent_beacon_block_root().is_some() {
+            // block with parent beacon block root: V3
+            Self::V3(ExecutionPayloadV3::from_block_unchecked(block_hash, block))
+        } else if block.body.withdrawals.is_some() {
+            // block with withdrawals: V2
+            Self::V2(ExecutionPayloadV2::from_block_unchecked(block_hash, block))
+        } else {
+            // otherwise V1
+            Self::V1(ExecutionPayloadV1::from_block_unchecked(block_hash, block))
+        };
+
+        (execution_payload, sidecar)
+    }
+
+    /// Converts [`alloy_consensus::Block`] to [`ExecutionPayload`] and also returns the
+    /// [`ExecutionPayloadSidecar`] extracted from the block.
+    ///
+    /// See also [`ExecutionPayloadV4::from_block_unchecked_with_bal`].
+    /// See also [`ExecutionPayloadSidecar::from_block`].
+    pub fn from_block_unchecked_with_bal<T, H>(
+        block_hash: B256,
+        block: &Block<T, H>,
+        bal: BlockAccessList,
+    ) -> (Self, ExecutionPayloadSidecar)
+    where
+        T: Encodable2718 + Transaction,
+        H: BlockHeader,
+    {
+        let sidecar = ExecutionPayloadSidecar::from_block(block);
+
+        let execution_payload = if block.header.block_access_list_hash().is_some() {
+            // block with block access list: V4
+            Self::V4(ExecutionPayloadV4::from_block_unchecked_with_bal(block_hash, block, bal))
         } else if block.header.parent_beacon_block_root().is_some() {
             // block with parent beacon block root: V3
             Self::V3(ExecutionPayloadV3::from_block_unchecked(block_hash, block))

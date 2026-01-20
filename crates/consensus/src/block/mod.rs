@@ -1,7 +1,6 @@
 //! Block-related consensus types.
 
 mod header;
-use alloy_eips::eip7928::BlockAccessList;
 pub use header::{BlockHeader, Header};
 
 mod traits;
@@ -99,7 +98,6 @@ impl<T, H> Block<T, H> {
                 transactions: self.body.transactions.into_iter().map(f).collect(),
                 ommers: self.body.ommers,
                 withdrawals: self.body.withdrawals,
-                block_access_list: self.body.block_access_list,
             },
         }
     }
@@ -122,7 +120,6 @@ impl<T, H> Block<T, H> {
                     .collect::<Result<_, _>>()?,
                 ommers: self.body.ommers,
                 withdrawals: self.body.withdrawals,
-                block_access_list: self.body.block_access_list,
             },
         })
     }
@@ -225,18 +222,11 @@ pub struct BlockBody<T, H = Header> {
     pub ommers: Vec<H>,
     /// Block withdrawals.
     pub withdrawals: Option<Withdrawals>,
-    ///EIP-7928: Block-level access list
-    pub block_access_list: Option<BlockAccessList>,
 }
 
 impl<T, H> Default for BlockBody<T, H> {
     fn default() -> Self {
-        Self {
-            transactions: Vec::new(),
-            ommers: Vec::new(),
-            withdrawals: None,
-            block_access_list: None,
-        }
+        Self { transactions: Vec::new(), ommers: Vec::new(), withdrawals: None }
     }
 }
 
@@ -280,7 +270,6 @@ impl<T, H> BlockBody<T, H> {
             transactions: self.transactions,
             ommers: self.ommers.into_iter().map(f).collect(),
             withdrawals: self.withdrawals,
-            block_access_list: self.block_access_list,
         }
     }
 
@@ -293,13 +282,7 @@ impl<T, H> BlockBody<T, H> {
             transactions: self.transactions,
             ommers: self.ommers.into_iter().map(f).collect::<Result<Vec<_>, _>>()?,
             withdrawals: self.withdrawals,
-            block_access_list: self.block_access_list,
         })
-    }
-
-    /// Returns the block access list for the block, if available.
-    pub const fn block_access_list(&self) -> &Option<BlockAccessList> {
-        &self.block_access_list
     }
 }
 
@@ -343,7 +326,6 @@ mod block_rlp {
         transactions: Vec<T>,
         ommers: Vec<H>,
         withdrawals: Option<Withdrawals>,
-        block_access_list: Option<BlockAccessList>,
     }
 
     #[derive(RlpEncodable)]
@@ -353,7 +335,6 @@ mod block_rlp {
         pub(crate) transactions: &'a Vec<T>,
         pub(crate) ommers: &'a Vec<H>,
         pub(crate) withdrawals: Option<&'a Withdrawals>,
-        pub(crate) block_access_list: Option<&'a BlockAccessList>,
     }
 
     impl<'a, T, H> HelperRef<'a, T, H> {
@@ -363,24 +344,14 @@ mod block_rlp {
                 transactions: &body.transactions,
                 ommers: &body.ommers,
                 withdrawals: body.withdrawals.as_ref(),
-                block_access_list: body.block_access_list.as_ref(),
             }
         }
     }
 
     impl<'a, T, H> From<&'a Block<T, H>> for HelperRef<'a, T, H> {
         fn from(block: &'a Block<T, H>) -> Self {
-            let Block {
-                header,
-                body: BlockBody { transactions, ommers, withdrawals, block_access_list },
-            } = block;
-            Self {
-                header,
-                transactions,
-                ommers,
-                withdrawals: withdrawals.as_ref(),
-                block_access_list: block_access_list.as_ref(),
-            }
+            let Block { header, body: BlockBody { transactions, ommers, withdrawals } } = block;
+            Self { header, transactions, ommers, withdrawals: withdrawals.as_ref() }
         }
     }
 
@@ -398,12 +369,8 @@ mod block_rlp {
 
     impl<T: Decodable, H: Decodable> Decodable for Block<T, H> {
         fn decode(b: &mut &[u8]) -> alloy_rlp::Result<Self> {
-            let Helper { header, transactions, ommers, withdrawals, block_access_list } =
-                Helper::decode(b)?;
-            Ok(Self {
-                header,
-                body: BlockBody { transactions, ommers, withdrawals, block_access_list },
-            })
+            let Helper { header, transactions, ommers, withdrawals } = Helper::decode(b)?;
+            Ok(Self { header, body: BlockBody { transactions, ommers, withdrawals } })
         }
     }
 
@@ -428,13 +395,8 @@ mod block_rlp {
             let transactions = Vec::<T>::decode(buf)?;
             let ommers = Vec::<H>::decode(buf)?;
             let withdrawals = if buf.is_empty() { None } else { Some(Decodable::decode(buf)?) };
-            let block_access_list =
-                if buf.is_empty() { None } else { Some(Decodable::decode(buf)?) };
 
-            let block = Self {
-                header,
-                body: BlockBody { transactions, ommers, withdrawals, block_access_list },
-            };
+            let block = Self { header, body: BlockBody { transactions, ommers, withdrawals } };
 
             Ok(Sealed::new_unchecked(block, header_hash))
         }
@@ -458,7 +420,7 @@ where
             .map(|_| H::arbitrary(u))
             .collect::<arbitrary::Result<Vec<_>>>()?;
 
-        Ok(Self { transactions, ommers, withdrawals: u.arbitrary()?, block_access_list: None })
+        Ok(Self { transactions, ommers, withdrawals: u.arbitrary()? })
     }
 }
 
@@ -525,12 +487,7 @@ mod tests {
 
         let block = Block {
             header: Header { number: 42, gas_limit: 30_000_000, ..Default::default() },
-            body: BlockBody {
-                transactions: vec![envelope],
-                ommers: vec![],
-                withdrawals: None,
-                block_access_list: None,
-            },
+            body: BlockBody { transactions: vec![envelope], ommers: vec![], withdrawals: None },
         };
 
         let expected_hash = block.header.hash_slow();
