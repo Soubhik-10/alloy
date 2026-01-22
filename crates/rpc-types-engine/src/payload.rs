@@ -499,6 +499,7 @@ impl ExecutionPayloadV1 {
             difficulty: Default::default(),
             nonce: Default::default(),
             block_access_list_hash: Default::default(),
+            slotnum: Default::default(),
         };
 
         Ok(Block {
