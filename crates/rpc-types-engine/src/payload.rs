@@ -499,7 +499,7 @@ impl ExecutionPayloadV1 {
             difficulty: Default::default(),
             nonce: Default::default(),
             block_access_list_hash: Default::default(),
-            slotnum: Default::default(),
+            slot_number: Default::default(),
         };
 
         Ok(Block {
@@ -996,7 +996,7 @@ pub struct ExecutionPayloadV4 {
     pub block_access_list: Bytes,
     /// Slot number of the block
     #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity"))]
-    pub slotnum: u64,
+    pub slot_number: u64,
 }
 
 impl ExecutionPayloadV4 {
@@ -1028,7 +1028,7 @@ impl ExecutionPayloadV4 {
     {
         Self {
             block_access_list: bal,
-            slotnum: block.slotnum().unwrap_or_default(),
+            slot_number: block.slot_number().unwrap_or_default(),
             payload_inner: ExecutionPayloadV3::from_block_unchecked(block_hash, block),
         }
     }
@@ -1043,7 +1043,7 @@ impl ExecutionPayloadV4 {
     {
         Self {
             block_access_list: Default::default(),
-            slotnum: block.slotnum().unwrap_or_default(),
+            slot_number: block.slot_number().unwrap_or_default(),
             payload_inner: ExecutionPayloadV3::from_block_unchecked(block_hash, block),
         }
     }
@@ -1092,7 +1092,7 @@ impl ExecutionPayloadV4 {
 
         base_block.header.block_access_list_hash =
             Some(alloy_primitives::keccak256(self.block_access_list.as_ref()));
-        base_block.header.slotnum = Some(self.slotnum);
+        base_block.header.slot_number = Some(self.slot_number);
 
         Ok(base_block)
     }
@@ -1162,7 +1162,7 @@ impl ssz::Decode for ExecutionPayloadV4 {
                 excess_blob_gas: decoder.decode_next()?,
             },
             block_access_list: decoder.decode_next()?,
-            slotnum: decoder.decode_next()?,
+            slot_number: decoder.decode_next()?,
         })
     }
 }
@@ -1201,7 +1201,7 @@ impl ssz::Encode for ExecutionPayloadV4 {
         encoder.append(&self.payload_inner.blob_gas_used);
         encoder.append(&self.payload_inner.excess_blob_gas);
         encoder.append(&self.block_access_list);
-        encoder.append(&self.slotnum);
+        encoder.append(&self.slot_number);
         encoder.finalize();
     }
 
@@ -1692,7 +1692,7 @@ impl ExecutionPayload {
         let sidecar = ExecutionPayloadSidecar::from_block(block);
 
         let execution_payload =
-            if block.header.block_access_list_hash().is_some() && block.slotnum().is_some() {
+            if block.header.block_access_list_hash().is_some() && block.slot_number().is_some() {
                 // block with block access list: V4
                 Self::V4(ExecutionPayloadV4::from_block_unchecked(block_hash, block))
             } else if block.header.parent_beacon_block_root().is_some() {
@@ -1726,7 +1726,7 @@ impl ExecutionPayload {
         let sidecar = ExecutionPayloadSidecar::from_block(block);
 
         let execution_payload =
-            if block.header.block_access_list_hash().is_some() && block.slotnum().is_some() {
+            if block.header.block_access_list_hash().is_some() && block.slot_number().is_some() {
                 // block with block access list: V4
                 Self::V4(ExecutionPayloadV4::from_block_unchecked_with_bal(block_hash, block, bal))
             } else if block.header.parent_beacon_block_root().is_some() {
@@ -1931,10 +1931,10 @@ impl ExecutionPayload {
         }
     }
 
-    /// Returns the slotnum if V4
-    pub const fn slotnum(&self) -> Option<u64> {
+    /// Returns the slot_number if V4
+    pub const fn slot_number(&self) -> Option<u64> {
         match self.as_v4() {
-            Some(payload) => Some(payload.slotnum),
+            Some(payload) => Some(payload.slot_number),
             None => None,
         }
     }
@@ -2224,7 +2224,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                     ExcessBlobGas,
                     // V4
                     BlockAccessList,
-                    Slotnum,
+                    SlotNumber,
                 }
 
                 let mut parent_hash = None;
@@ -2245,7 +2245,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                 let mut blob_gas_used = None;
                 let mut excess_blob_gas = None;
                 let mut block_access_list = None;
-                let mut slotnum = None;
+                let mut slot_number = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -2285,9 +2285,9 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                             excess_blob_gas = Some(raw.to());
                         }
                         Fields::BlockAccessList => block_access_list = Some(map.next_value()?),
-                        Fields::Slotnum => {
+                        Fields::SlotNumber => {
                             let raw = map.next_value::<U64>()?;
-                            slotnum = Some(raw.to());
+                            slot_number = Some(raw.to());
                         }
                     }
                 }
@@ -2350,8 +2350,8 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                     Some(blob_gas_used),
                     Some(excess_blob_gas),
                     Some(block_access_list),
-                    Some(slotnum),
-                ) = (blob_gas_used, excess_blob_gas, block_access_list, slotnum)
+                    Some(slot_number),
+                ) = (blob_gas_used, excess_blob_gas, block_access_list, slot_number)
                 {
                     return Ok(ExecutionPayload::V4(ExecutionPayloadV4 {
                         payload_inner: ExecutionPayloadV3 {
@@ -2360,7 +2360,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                             excess_blob_gas,
                         },
                         block_access_list,
-                        slotnum,
+                        slot_number,
                     }));
                 }
 
@@ -2474,7 +2474,7 @@ pub struct PayloadAttributes {
     pub parent_beacon_block_root: Option<B256>,
     /// Slot number enabled with V4.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub slotnum: Option<u64>,
+    pub slot_number: Option<u64>,
 }
 
 /// This structure contains the result of processing a payload or fork choice update.
@@ -2698,9 +2698,9 @@ impl ExecutionData {
         self.payload.withdrawals()
     }
 
-    /// Return the slotnum for the payload or attributes.
-    pub const fn slotnum(&self) -> Option<u64> {
-        self.payload.slotnum()
+    /// Return the slot_number for the payload or attributes.
+    pub const fn slot_number(&self) -> Option<u64> {
+        self.payload.slot_number()
     }
 
     /// Tries to create a new unsealed block from the given payload and payload sidecar.
@@ -3526,7 +3526,7 @@ mod tests {
     #[test]
     #[cfg(feature = "serde")]
     fn serde_roundtrip_payload_v4() {
-        let s = r#"{"parentHash":"0x9a3ac13c3bf8a1fcf72cf6cf42bc22518682e20468cbbce75884a3f88854f732","feeRecipient":"0x584377bce64b7cd8e9828e8b0d1f95acbaf2c7c2","stateRoot":"0x22578ef689f2e401e1dbbe75e975c5eb877156eb15cf8cc3c49a7a57427ebc11","receiptsRoot":"0xf78dfb743fbd92ade140711c8bbc542b5e307f0ab7984eff35d751969fe57efa","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prevRandao":"0x44a3dc58ab78fe363d1e213811daef0caba59a4284f4a050cda6abdb4e967425","blockNumber":"0x1","gasLimit":"0x1380d","gasUsed":"0x5208","timestamp":"0x68b78f4b","extraData":"0x726574682f76312e362e302f6c696e7578","baseFeePerGas":"0x341565c00","blockHash":"0xd462ad353b8d5b42fc7dce75d6a3823784037641bd6e06a0e2647df0e6d254d9","transactions":["0x02f876820a28808477359400847735940082520894ab0840c0e43688012c1adb0f5e3fc665188f83d28a029d394a5d630544000080c080a0a044076b7e67b5deecc63f61a8d7913fab86ca365b344b5759d1fe3563b4c39ea019eab979dd000da04dfc72bb0377c092d30fd9e1cab5ae487de49586cc8b0090"],"withdrawals":[],"blobGasUsed":"0x0","excessBlobGas":"0x0","blockAccessList":"0xf854eb946be02d1d3665660d22ff9624b7be0551ee1ac91bc0c0cecd018b4a454687d9c55ec4a76000c3c20101c0e794ab0840c0e43688012c1adb0f5e3fc665188f83d2c0c0cdcc018a029d394a5d6305440000c0c0","slotnum":"0x0"}"#;
+        let s = r#"{"parentHash":"0x9a3ac13c3bf8a1fcf72cf6cf42bc22518682e20468cbbce75884a3f88854f732","feeRecipient":"0x584377bce64b7cd8e9828e8b0d1f95acbaf2c7c2","stateRoot":"0x22578ef689f2e401e1dbbe75e975c5eb877156eb15cf8cc3c49a7a57427ebc11","receiptsRoot":"0xf78dfb743fbd92ade140711c8bbc542b5e307f0ab7984eff35d751969fe57efa","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prevRandao":"0x44a3dc58ab78fe363d1e213811daef0caba59a4284f4a050cda6abdb4e967425","blockNumber":"0x1","gasLimit":"0x1380d","gasUsed":"0x5208","timestamp":"0x68b78f4b","extraData":"0x726574682f76312e362e302f6c696e7578","baseFeePerGas":"0x341565c00","blockHash":"0xd462ad353b8d5b42fc7dce75d6a3823784037641bd6e06a0e2647df0e6d254d9","transactions":["0x02f876820a28808477359400847735940082520894ab0840c0e43688012c1adb0f5e3fc665188f83d28a029d394a5d630544000080c080a0a044076b7e67b5deecc63f61a8d7913fab86ca365b344b5759d1fe3563b4c39ea019eab979dd000da04dfc72bb0377c092d30fd9e1cab5ae487de49586cc8b0090"],"withdrawals":[],"blobGasUsed":"0x0","excessBlobGas":"0x0","blockAccessList":"0xf854eb946be02d1d3665660d22ff9624b7be0551ee1ac91bc0c0cecd018b4a454687d9c55ec4a76000c3c20101c0e794ab0840c0e43688012c1adb0f5e3fc665188f83d2c0c0cdcc018a029d394a5d6305440000c0c0","slot_number":"0x0"}"#;
         let payload: ExecutionPayloadV4 = serde_json::from_str(s).unwrap();
         assert_eq!(serde_json::to_string(&payload).unwrap(), s);
 
@@ -3537,7 +3537,7 @@ mod tests {
     #[test]
     #[cfg(feature = "serde")]
     fn serde_payload_input_enum_v4() {
-        let response_v4 = r#"{"parentHash":"0x9a3ac13c3bf8a1fcf72cf6cf42bc22518682e20468cbbce75884a3f88854f732","feeRecipient":"0x584377bce64b7cd8e9828e8b0d1f95acbaf2c7c2","stateRoot":"0x22578ef689f2e401e1dbbe75e975c5eb877156eb15cf8cc3c49a7a57427ebc11","receiptsRoot":"0xf78dfb743fbd92ade140711c8bbc542b5e307f0ab7984eff35d751969fe57efa","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prevRandao":"0x44a3dc58ab78fe363d1e213811daef0caba59a4284f4a050cda6abdb4e967425","blockNumber":"0x1","gasLimit":"0x1380d","gasUsed":"0x5208","timestamp":"0x68b78f4b","extraData":"0x726574682f76312e362e302f6c696e7578","baseFeePerGas":"0x341565c00","blockHash":"0xd462ad353b8d5b42fc7dce75d6a3823784037641bd6e06a0e2647df0e6d254d9","transactions":["0x02f876820a28808477359400847735940082520894ab0840c0e43688012c1adb0f5e3fc665188f83d28a029d394a5d630544000080c080a0a044076b7e67b5deecc63f61a8d7913fab86ca365b344b5759d1fe3563b4c39ea019eab979dd000da04dfc72bb0377c092d30fd9e1cab5ae487de49586cc8b0090"],"withdrawals":[],"blobGasUsed":"0x0","excessBlobGas":"0x0","blockAccessList":"0xf854eb946be02d1d3665660d22ff9624b7be0551ee1ac91bc0c0cecd018b4a454687d9c55ec4a76000c3c20101c0e794ab0840c0e43688012c1adb0f5e3fc665188f83d2c0c0cdcc018a029d394a5d6305440000c0c0","slotnum":"0x0"}"#;
+        let response_v4 = r#"{"parentHash":"0x9a3ac13c3bf8a1fcf72cf6cf42bc22518682e20468cbbce75884a3f88854f732","feeRecipient":"0x584377bce64b7cd8e9828e8b0d1f95acbaf2c7c2","stateRoot":"0x22578ef689f2e401e1dbbe75e975c5eb877156eb15cf8cc3c49a7a57427ebc11","receiptsRoot":"0xf78dfb743fbd92ade140711c8bbc542b5e307f0ab7984eff35d751969fe57efa","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prevRandao":"0x44a3dc58ab78fe363d1e213811daef0caba59a4284f4a050cda6abdb4e967425","blockNumber":"0x1","gasLimit":"0x1380d","gasUsed":"0x5208","timestamp":"0x68b78f4b","extraData":"0x726574682f76312e362e302f6c696e7578","baseFeePerGas":"0x341565c00","blockHash":"0xd462ad353b8d5b42fc7dce75d6a3823784037641bd6e06a0e2647df0e6d254d9","transactions":["0x02f876820a28808477359400847735940082520894ab0840c0e43688012c1adb0f5e3fc665188f83d28a029d394a5d630544000080c080a0a044076b7e67b5deecc63f61a8d7913fab86ca365b344b5759d1fe3563b4c39ea019eab979dd000da04dfc72bb0377c092d30fd9e1cab5ae487de49586cc8b0090"],"withdrawals":[],"blobGasUsed":"0x0","excessBlobGas":"0x0","blockAccessList":"0xf854eb946be02d1d3665660d22ff9624b7be0551ee1ac91bc0c0cecd018b4a454687d9c55ec4a76000c3c20101c0e794ab0840c0e43688012c1adb0f5e3fc665188f83d2c0c0cdcc018a029d394a5d6305440000c0c0","slot_number":"0x0"}"#;
 
         let payload: ExecutionPayload = serde_json::from_str(response_v4).unwrap();
         assert!(payload.as_v4().is_some());
