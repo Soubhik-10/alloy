@@ -444,24 +444,29 @@ struct BeaconExecutionPayloadV4<'a> {
     payload_inner: BeaconExecutionPayloadV3<'a>,
     /// RLP encoded `block_access_list`
     block_access_list: Cow<'a, Bytes>,
+    /// Slot number
+    #[serde_as(as = "DisplayFromStr")]
+    slotnum: u64,
 }
 
 impl<'a> From<BeaconExecutionPayloadV4<'a>> for ExecutionPayloadV4 {
     fn from(payload: BeaconExecutionPayloadV4<'a>) -> Self {
-        let BeaconExecutionPayloadV4 { payload_inner, block_access_list } = payload;
+        let BeaconExecutionPayloadV4 { payload_inner, block_access_list, slotnum } = payload;
         Self {
             payload_inner: payload_inner.into(),
             block_access_list: block_access_list.into_owned(),
+            slotnum,
         }
     }
 }
 
 impl<'a> From<&'a ExecutionPayloadV4> for BeaconExecutionPayloadV4<'a> {
     fn from(value: &'a ExecutionPayloadV4) -> Self {
-        let ExecutionPayloadV4 { payload_inner, block_access_list } = value;
+        let ExecutionPayloadV4 { payload_inner, block_access_list, slotnum } = value;
         BeaconExecutionPayloadV4 {
             payload_inner: payload_inner.into(),
             block_access_list: Cow::Borrowed(block_access_list),
+            slotnum: *slotnum,
         }
     }
 }

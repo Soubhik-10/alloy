@@ -994,6 +994,8 @@ pub struct ExecutionPayloadV4 {
     pub payload_inner: ExecutionPayloadV3,
     /// RLP-encoded block access list as defined in EIP-7928
     pub block_access_list: Bytes,
+    /// Slot number of the block
+    pub slotnum: u64,
 }
 
 impl ExecutionPayloadV4 {
@@ -1025,6 +1027,7 @@ impl ExecutionPayloadV4 {
     {
         Self {
             block_access_list: bal,
+            slotnum: block.slotnum().unwrap_or_default(),
             payload_inner: ExecutionPayloadV3::from_block_unchecked(block_hash, block),
         }
     }
@@ -1039,6 +1042,7 @@ impl ExecutionPayloadV4 {
     {
         Self {
             block_access_list: Default::default(),
+            slotnum: block.slotnum().unwrap_or_default(),
             payload_inner: ExecutionPayloadV3::from_block_unchecked(block_hash, block),
         }
     }
@@ -1087,6 +1091,7 @@ impl ExecutionPayloadV4 {
 
         base_block.header.block_access_list_hash =
             Some(alloy_primitives::keccak256(self.block_access_list.as_ref()));
+        base_block.header.slotnum = Some(self.slotnum);
 
         Ok(base_block)
     }
@@ -1127,6 +1132,7 @@ impl ssz::Decode for ExecutionPayloadV4 {
         builder.register_type::<u64>()?;
         builder.register_type::<u64>()?;
         builder.register_type::<Bytes>()?;
+        builder.register_type::<u64>()?;
 
         let mut decoder = builder.build()?;
 
@@ -1155,6 +1161,7 @@ impl ssz::Decode for ExecutionPayloadV4 {
                 excess_blob_gas: decoder.decode_next()?,
             },
             block_access_list: decoder.decode_next()?,
+            slotnum: decoder.decode_next()?,
         })
     }
 }
@@ -1169,7 +1176,7 @@ impl ssz::Encode for ExecutionPayloadV4 {
         let offset = <B256 as ssz::Encode>::ssz_fixed_len() * 5
             + <Address as ssz::Encode>::ssz_fixed_len()
             + <Bloom as ssz::Encode>::ssz_fixed_len()
-            + <u64 as ssz::Encode>::ssz_fixed_len() * 6
+            + <u64 as ssz::Encode>::ssz_fixed_len() * 7
             + <U256 as ssz::Encode>::ssz_fixed_len()
             + ssz::BYTES_PER_LENGTH_OFFSET * 4;
 
@@ -1193,6 +1200,7 @@ impl ssz::Encode for ExecutionPayloadV4 {
         encoder.append(&self.payload_inner.blob_gas_used);
         encoder.append(&self.payload_inner.excess_blob_gas);
         encoder.append(&self.block_access_list);
+        encoder.append(&self.slotnum);
         encoder.finalize();
     }
 
@@ -1200,6 +1208,7 @@ impl ssz::Encode for ExecutionPayloadV4 {
         <ExecutionPayloadV3 as ssz::Encode>::ssz_bytes_len(&self.payload_inner)
             + ssz::BYTES_PER_LENGTH_OFFSET
             + self.block_access_list.ssz_bytes_len()
+            + <u64 as ssz::Encode>::ssz_fixed_len()
     }
 }
 
@@ -1681,19 +1690,20 @@ impl ExecutionPayload {
     {
         let sidecar = ExecutionPayloadSidecar::from_block(block);
 
-        let execution_payload = if block.header.block_access_list_hash().is_some() {
-            // block with block access list: V4
-            Self::V4(ExecutionPayloadV4::from_block_unchecked(block_hash, block))
-        } else if block.header.parent_beacon_block_root().is_some() {
-            // block with parent beacon block root: V3
-            Self::V3(ExecutionPayloadV3::from_block_unchecked(block_hash, block))
-        } else if block.body.withdrawals.is_some() {
-            // block with withdrawals: V2
-            Self::V2(ExecutionPayloadV2::from_block_unchecked(block_hash, block))
-        } else {
-            // otherwise V1
-            Self::V1(ExecutionPayloadV1::from_block_unchecked(block_hash, block))
-        };
+        let execution_payload =
+            if block.header.block_access_list_hash().is_some() && block.slotnum().is_some() {
+                // block with block access list: V4
+                Self::V4(ExecutionPayloadV4::from_block_unchecked(block_hash, block))
+            } else if block.header.parent_beacon_block_root().is_some() {
+                // block with parent beacon block root: V3
+                Self::V3(ExecutionPayloadV3::from_block_unchecked(block_hash, block))
+            } else if block.body.withdrawals.is_some() {
+                // block with withdrawals: V2
+                Self::V2(ExecutionPayloadV2::from_block_unchecked(block_hash, block))
+            } else {
+                // otherwise V1
+                Self::V1(ExecutionPayloadV1::from_block_unchecked(block_hash, block))
+            };
 
         (execution_payload, sidecar)
     }
@@ -1714,19 +1724,20 @@ impl ExecutionPayload {
     {
         let sidecar = ExecutionPayloadSidecar::from_block(block);
 
-        let execution_payload = if block.header.block_access_list_hash().is_some() {
-            // block with block access list: V4
-            Self::V4(ExecutionPayloadV4::from_block_unchecked_with_bal(block_hash, block, bal))
-        } else if block.header.parent_beacon_block_root().is_some() {
-            // block with parent beacon block root: V3
-            Self::V3(ExecutionPayloadV3::from_block_unchecked(block_hash, block))
-        } else if block.body.withdrawals.is_some() {
-            // block with withdrawals: V2
-            Self::V2(ExecutionPayloadV2::from_block_unchecked(block_hash, block))
-        } else {
-            // otherwise V1
-            Self::V1(ExecutionPayloadV1::from_block_unchecked(block_hash, block))
-        };
+        let execution_payload =
+            if block.header.block_access_list_hash().is_some() && block.slotnum().is_some() {
+                // block with block access list: V4
+                Self::V4(ExecutionPayloadV4::from_block_unchecked_with_bal(block_hash, block, bal))
+            } else if block.header.parent_beacon_block_root().is_some() {
+                // block with parent beacon block root: V3
+                Self::V3(ExecutionPayloadV3::from_block_unchecked(block_hash, block))
+            } else if block.body.withdrawals.is_some() {
+                // block with withdrawals: V2
+                Self::V2(ExecutionPayloadV2::from_block_unchecked(block_hash, block))
+            } else {
+                // otherwise V1
+                Self::V1(ExecutionPayloadV1::from_block_unchecked(block_hash, block))
+            };
 
         (execution_payload, sidecar)
     }
@@ -1915,6 +1926,14 @@ impl ExecutionPayload {
     pub const fn block_access_list(&self) -> Option<&Bytes> {
         match self.as_v4() {
             Some(payload) => Some(&payload.block_access_list),
+            None => None,
+        }
+    }
+
+    /// Returns the slotnum if V4
+    pub const fn slotnum(&self) -> Option<u64> {
+        match self.as_v4() {
+            Some(payload) => Some(payload.slotnum),
             None => None,
         }
     }
@@ -2204,6 +2223,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                     ExcessBlobGas,
                     // V4
                     BlockAccessList,
+                    Slotnum,
                 }
 
                 let mut parent_hash = None;
@@ -2224,6 +2244,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                 let mut blob_gas_used = None;
                 let mut excess_blob_gas = None;
                 let mut block_access_list = None;
+                let mut slotnum = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -2263,6 +2284,10 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                             excess_blob_gas = Some(raw.to());
                         }
                         Fields::BlockAccessList => block_access_list = Some(map.next_value()?),
+                        Fields::Slotnum => {
+                            let raw = map.next_value::<U64>()?;
+                            slotnum = Some(raw.to());
+                        }
                     }
                 }
 
@@ -2320,8 +2345,12 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                     };
                 };
 
-                if let (Some(blob_gas_used), Some(excess_blob_gas), Some(block_access_list)) =
-                    (blob_gas_used, excess_blob_gas, block_access_list)
+                if let (
+                    Some(blob_gas_used),
+                    Some(excess_blob_gas),
+                    Some(block_access_list),
+                    Some(slotnum),
+                ) = (blob_gas_used, excess_blob_gas, block_access_list, slotnum)
                 {
                     return Ok(ExecutionPayload::V4(ExecutionPayloadV4 {
                         payload_inner: ExecutionPayloadV3 {
@@ -2330,6 +2359,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionPayload {
                             excess_blob_gas,
                         },
                         block_access_list,
+                        slotnum,
                     }));
                 }
 
