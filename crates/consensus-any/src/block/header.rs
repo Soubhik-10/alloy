@@ -99,6 +99,9 @@ pub struct AnyHeader {
     /// EIP-7928 block access list hash.
     #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
     pub block_access_list_hash: Option<B256>,
+    /// EIP-7843 slot_number.
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    pub slot_number: Option<u64>,
 }
 
 impl AnyHeader {
@@ -148,6 +151,7 @@ impl AnyHeader {
             parent_beacon_block_root,
             requests_hash,
             block_access_list_hash,
+            slot_number,
         } = self;
 
         Ok(Header {
@@ -173,6 +177,7 @@ impl AnyHeader {
             parent_beacon_block_root,
             requests_hash,
             block_access_list_hash,
+            slot_number,
         })
     }
 
@@ -203,6 +208,7 @@ impl AnyHeader {
             parent_beacon_block_root,
             requests_hash,
             block_access_list_hash,
+            slot_number,
         } = self;
 
         Header {
@@ -228,6 +234,7 @@ impl AnyHeader {
             parent_beacon_block_root,
             requests_hash,
             block_access_list_hash,
+            slot_number,
         }
     }
 }
@@ -317,6 +324,10 @@ impl BlockHeader for AnyHeader {
         self.block_access_list_hash
     }
 
+    fn slot_number(&self) -> Option<u64> {
+        self.slot_number
+    }
+
     fn extra_data(&self) -> &Bytes {
         &self.extra_data
     }
@@ -347,6 +358,7 @@ impl From<Header> for AnyHeader {
             parent_beacon_block_root,
             requests_hash,
             block_access_list_hash,
+            slot_number,
         } = value;
 
         Self {
@@ -372,6 +384,7 @@ impl From<Header> for AnyHeader {
             parent_beacon_block_root,
             requests_hash,
             block_access_list_hash,
+            slot_number,
         }
     }
 }

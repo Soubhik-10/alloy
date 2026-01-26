@@ -157,6 +157,8 @@ struct BeaconPayloadAttributes {
     withdrawals: Option<Vec<Withdrawal>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     parent_beacon_block_root: Option<B256>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    slot_number: Option<u64>,
 }
 
 /// A helper module for serializing and deserializing the payload attributes for the beacon API.
@@ -183,6 +185,7 @@ pub mod beacon_api_payload_attributes {
             suggested_fee_recipient: payload_attributes.suggested_fee_recipient,
             withdrawals: payload_attributes.withdrawals.clone(),
             parent_beacon_block_root: payload_attributes.parent_beacon_block_root,
+            slot_number: payload_attributes.slot_number,
         };
         beacon_api_payload_attributes.serialize(serializer)
     }
@@ -199,6 +202,7 @@ pub mod beacon_api_payload_attributes {
             suggested_fee_recipient: beacon_api_payload_attributes.suggested_fee_recipient,
             withdrawals: beacon_api_payload_attributes.withdrawals,
             parent_beacon_block_root: beacon_api_payload_attributes.parent_beacon_block_root,
+            slot_number: beacon_api_payload_attributes.slot_number,
         })
     }
 }
@@ -447,24 +451,29 @@ struct BeaconExecutionPayloadV4<'a> {
     payload_inner: BeaconExecutionPayloadV3<'a>,
     /// RLP-encoded block access list as defined in EIP-7928.
     block_access_list: Cow<'a, Bytes>,
+    /// Slot number
+    #[serde_as(as = "DisplayFromStr")]
+    slot_number: u64,
 }
 
 impl<'a> From<BeaconExecutionPayloadV4<'a>> for ExecutionPayloadV4 {
     fn from(payload: BeaconExecutionPayloadV4<'a>) -> Self {
-        let BeaconExecutionPayloadV4 { payload_inner, block_access_list } = payload;
+        let BeaconExecutionPayloadV4 { payload_inner, block_access_list, slot_number } = payload;
         Self {
             payload_inner: payload_inner.into(),
             block_access_list: block_access_list.into_owned(),
+            slot_number,
         }
     }
 }
 
 impl<'a> From<&'a ExecutionPayloadV4> for BeaconExecutionPayloadV4<'a> {
     fn from(value: &'a ExecutionPayloadV4) -> Self {
-        let ExecutionPayloadV4 { payload_inner, block_access_list } = value;
+        let ExecutionPayloadV4 { payload_inner, block_access_list, slot_number } = value;
         BeaconExecutionPayloadV4 {
             payload_inner: payload_inner.into(),
             block_access_list: Cow::Borrowed(block_access_list),
+            slot_number: *slot_number,
         }
     }
 }
