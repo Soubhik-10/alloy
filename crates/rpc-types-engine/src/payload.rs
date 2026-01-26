@@ -1223,6 +1223,7 @@ impl ssz::Encode for ExecutionPayloadV4 {
         <ExecutionPayloadV3 as ssz::Encode>::ssz_bytes_len(&self.payload_inner)
             + ssz::BYTES_PER_LENGTH_OFFSET
             + self.block_access_list.len()
+            + <u64 as ssz::Encode>::ssz_fixed_len()
     }
 }
 
