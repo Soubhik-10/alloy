@@ -363,7 +363,10 @@ impl TryFrom<ExecutionPayloadEnvelopeV5> for ExecutionPayloadEnvelopeV4 {
     }
 }
 
-/// For BAL.
+/// This structure maps for the return value of `engine_getPayloadV6` of the beacon chain spec.
+///
+/// See also:
+/// <https://github.com/ethereum/execution-apis/blob/7b4d9f62a3fe62b9b8dcb355f1c5a38b5ff084f6/src/engine/amsterdam.md#engine_getpayloadv6>
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
@@ -374,7 +377,9 @@ pub struct ExecutionPayloadEnvelopeV6 {
     /// The expected value to be received by the feeRecipient in wei
     pub block_value: U256,
     /// The blobs, commitments, and EIP-7594 style cell proofs associated with the executed
-    /// payload. See also: <https://github.com/ethereum/execution-apis/blob/a091e7c3b6a5748a8843a1a9130d5fbfc3191a2c/src/engine/osaka.md#BlobsBundleV2>.
+    /// payload.
+    ///
+    /// See also: <https://github.com/ethereum/execution-apis/blob/a091e7c3b6a5748a8843a1a9130d5fbfc3191a2c/src/engine/osaka.md#BlobsBundleV2>.
     pub blobs_bundle: BlobsBundleV2,
     /// Introduced in V3, this represents a suggestion from the execution layer if the payload
     /// should be used instead of an externally provided one.
@@ -503,12 +508,7 @@ impl ExecutionPayloadV1 {
 
         Ok(Block {
             header,
-            body: BlockBody {
-                transactions: self.transactions,
-                ommers: vec![],
-                withdrawals: None,
-                block_access_list: None,
-            },
+            body: BlockBody { transactions: self.transactions, ommers: vec![], withdrawals: None },
         })
     }
 
@@ -987,7 +987,14 @@ impl ssz::Encode for ExecutionPayloadV3 {
     }
 }
 
-/// New payload structure for V4. This is required for EIP-7928
+/// Execution payload V4 as defined in the Amsterdam fork.
+///
+/// This extends [`ExecutionPayloadV3`] with the `block_access_list` field for [EIP-7928].
+///
+/// See also:
+/// <https://github.com/ethereum/execution-apis/blob/7b4d9f62a3fe62b9b8dcb355f1c5a38b5ff084f6/src/engine/amsterdam.md#executionpayloadv4>
+///
+/// [EIP-7928]: https://eips.ethereum.org/EIPS/eip-7928
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
@@ -996,7 +1003,9 @@ pub struct ExecutionPayloadV4 {
     /// Inner V3 payload
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub payload_inner: ExecutionPayloadV3,
-    /// RLP-encoded block access list as defined in EIP-7928
+    /// RLP-encoded block access list as defined in [EIP-7928].
+    ///
+    /// [EIP-7928]: https://eips.ethereum.org/EIPS/eip-7928
     pub block_access_list: Bytes,
 }
 
@@ -1014,6 +1023,25 @@ impl ExecutionPayloadV4 {
         Self::from_block_unchecked(block.hash_slow(), block)
     }
 
+    /// Converts [`alloy_consensus::Block`] to [`ExecutionPayloadV4`] using the given block hash and
+    /// Bal.
+    ///
+    /// See also [`ExecutionPayloadV3::from_block_unchecked`].
+    pub fn from_block_unchecked_with_bal<T, H>(
+        block_hash: B256,
+        block: &Block<T, H>,
+        bal: Bytes,
+    ) -> Self
+    where
+        T: Encodable2718,
+        H: BlockHeader,
+    {
+        Self {
+            block_access_list: bal,
+            payload_inner: ExecutionPayloadV3::from_block_unchecked(block_hash, block),
+        }
+    }
+
     /// Converts [`alloy_consensus::Block`] to [`ExecutionPayloadV4`] using the given block hash.
     ///
     /// See also [`ExecutionPayloadV3::from_block_unchecked`].
@@ -1023,8 +1051,7 @@ impl ExecutionPayloadV4 {
         H: BlockHeader,
     {
         Self {
-            block_access_list: alloy_rlp::encode(block.body.block_access_list.clone().unwrap())
-                .into(),
+            block_access_list: Default::default(),
             payload_inner: ExecutionPayloadV3::from_block_unchecked(block_hash, block),
         }
     }
@@ -1070,9 +1097,6 @@ impl ExecutionPayloadV4 {
     /// without any conversion.
     pub fn into_block_raw(self) -> Result<Block<Bytes>, PayloadError> {
         let mut base_block = self.payload_inner.into_block_raw()?;
-
-        base_block.body.block_access_list =
-            Some(alloy_rlp::decode_exact(self.block_access_list.as_ref())?);
 
         base_block.header.block_access_list_hash =
             Some(alloy_primitives::keccak256(self.block_access_list.as_ref()));
@@ -1188,7 +1212,7 @@ impl ssz::Encode for ExecutionPayloadV4 {
     fn ssz_bytes_len(&self) -> usize {
         <ExecutionPayloadV3 as ssz::Encode>::ssz_bytes_len(&self.payload_inner)
             + ssz::BYTES_PER_LENGTH_OFFSET
-            + self.block_access_list.ssz_bytes_len()
+            + self.block_access_list.len()
     }
 }
 
@@ -1673,6 +1697,39 @@ impl ExecutionPayload {
         let execution_payload = if block.header.block_access_list_hash().is_some() {
             // block with block access list: V4
             Self::V4(ExecutionPayloadV4::from_block_unchecked(block_hash, block))
+        } else if block.header.parent_beacon_block_root().is_some() {
+            // block with parent beacon block root: V3
+            Self::V3(ExecutionPayloadV3::from_block_unchecked(block_hash, block))
+        } else if block.body.withdrawals.is_some() {
+            // block with withdrawals: V2
+            Self::V2(ExecutionPayloadV2::from_block_unchecked(block_hash, block))
+        } else {
+            // otherwise V1
+            Self::V1(ExecutionPayloadV1::from_block_unchecked(block_hash, block))
+        };
+
+        (execution_payload, sidecar)
+    }
+
+    /// Converts [`alloy_consensus::Block`] to [`ExecutionPayload`] and also returns the
+    /// [`ExecutionPayloadSidecar`] extracted from the block.
+    ///
+    /// See also [`ExecutionPayloadV4::from_block_unchecked_with_bal`].
+    /// See also [`ExecutionPayloadSidecar::from_block`].
+    pub fn from_block_unchecked_with_bal<T, H>(
+        block_hash: B256,
+        block: &Block<T, H>,
+        bal: Bytes,
+    ) -> (Self, ExecutionPayloadSidecar)
+    where
+        T: Encodable2718 + Transaction,
+        H: BlockHeader,
+    {
+        let sidecar = ExecutionPayloadSidecar::from_block(block);
+
+        let execution_payload = if block.header.block_access_list_hash().is_some() {
+            // block with block access list: V4
+            Self::V4(ExecutionPayloadV4::from_block_unchecked_with_bal(block_hash, block, bal))
         } else if block.header.parent_beacon_block_root().is_some() {
             // block with parent beacon block root: V3
             Self::V3(ExecutionPayloadV3::from_block_unchecked(block_hash, block))
@@ -2364,7 +2421,8 @@ impl ExecutionPayloadBodyV1 {
 
     /// Converts a [`alloy_consensus::Block`] into an execution payload body.
     pub fn from_block<T: Encodable2718, H>(block: Block<T, H>) -> Self {
-        Self::new(block.body.withdrawals.clone(), block.body.transactions())
+        let BlockBody { withdrawals, transactions, .. } = block.into_body();
+        Self::new(withdrawals, transactions.iter())
     }
 }
 
@@ -2618,6 +2676,11 @@ impl ExecutionData {
     /// Return the withdrawals for the payload or attributes.
     pub const fn withdrawals(&self) -> Option<&Vec<Withdrawal>> {
         self.payload.withdrawals()
+    }
+
+    /// Returns the number of transactions in the payload.
+    pub const fn transaction_count(&self) -> usize {
+        self.payload.transactions().len()
     }
 
     /// Tries to create a new unsealed block from the given payload and payload sidecar.
