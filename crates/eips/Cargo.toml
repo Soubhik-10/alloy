@@ -102,6 +102,7 @@ serde = [
 	"c-kzg?/serde",
 	"alloy-eip2930/serde",
 	"alloy-eip7702/serde",
+	"alloy-eip7928/serde",
 	"alloy-eip2124/serde",
 	"alloy-eip7928/serde",
 	"either/serde",
