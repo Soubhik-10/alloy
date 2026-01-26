@@ -440,13 +440,16 @@ pub mod beacon_payload_v3 {
     }
 }
 
+/// Beacon API representation of [`ExecutionPayloadV4`].
+///
+/// See also <https://github.com/alloy-rs/alloy/pull/3330>
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 struct BeaconExecutionPayloadV4<'a> {
     /// Inner V3 payload
     #[serde(flatten)]
     payload_inner: BeaconExecutionPayloadV3<'a>,
-    /// RLP encoded `block_access_list`
+    /// RLP-encoded block access list as defined in EIP-7928.
     block_access_list: Cow<'a, Bytes>,
     /// Slot number
     #[serde_as(as = "DisplayFromStr")]
