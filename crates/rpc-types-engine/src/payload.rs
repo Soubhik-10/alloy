@@ -9,6 +9,8 @@ use alloy_consensus::{
     constants::MAXIMUM_EXTRA_DATA_SIZE, Blob, Block, BlockBody, BlockHeader, Bytes48, Header,
     HeaderInfo, Transaction, EMPTY_OMMER_ROOT_HASH,
 };
+#[cfg(feature = "kzg")]
+use alloy_eips::eip4844::{AsAlloy, AsCkzg};
 use alloy_eips::{
     calc_next_block_base_fee,
     eip1559::BaseFeeParams,
@@ -1816,25 +1818,25 @@ impl BlobsBundleV1 {
     ) -> Result<BlobsBundleV2, alloy_eips::eip4844::c_kzg::Error> {
         use alloy_eips::eip7594::CELLS_PER_EXT_BLOB;
 
+        if let [blob] = self.blobs.as_slice() {
+            let (_cells, kzg_proofs) = settings.compute_cells_and_kzg_proofs(blob.as_ckzg())?;
+            let cell_proofs =
+                alloy_eips::eip4844::c_kzg::KzgProof::boxed_slice_as_alloy(kzg_proofs).into();
+            return Ok(BlobsBundleV2 {
+                commitments: self.commitments,
+                proofs: cell_proofs,
+                blobs: self.blobs,
+            });
+        }
+
         let mut cell_proofs = Vec::with_capacity(self.blobs.len() * CELLS_PER_EXT_BLOB);
 
         for blob in self.blobs.iter() {
-            // SAFETY: Blob and alloy_eips::eip4844::c_kzg::Blob have the same memory layout
-            let blob_kzg =
-                unsafe { core::mem::transmute::<&Blob, &alloy_eips::eip4844::c_kzg::Blob>(blob) };
-
             // Compute cells and their KZG proofs for this blob
-            let (_cells, kzg_proofs) = settings.compute_cells_and_kzg_proofs(blob_kzg)?;
-
-            // SAFETY: same size
-            unsafe {
-                for kzg_proof in kzg_proofs.iter() {
-                    cell_proofs.push(core::mem::transmute::<
-                        alloy_eips::eip4844::c_kzg::Bytes48,
-                        Bytes48,
-                    >(kzg_proof.to_bytes()));
-                }
-            }
+            let (_cells, kzg_proofs) = settings.compute_cells_and_kzg_proofs(blob.as_ckzg())?;
+            cell_proofs.extend_from_slice(alloy_eips::eip4844::c_kzg::KzgProof::slice_as_alloy(
+                kzg_proofs.as_ref(),
+            ));
         }
 
         Ok(BlobsBundleV2 { commitments: self.commitments, proofs: cell_proofs, blobs: self.blobs })
@@ -2070,22 +2072,10 @@ impl BlobsBundleV2 {
         let mut proofs = Vec::with_capacity(self.blobs.len());
 
         for (blob, commitment) in self.blobs.iter().zip(self.commitments.iter()) {
-            // SAFETY: Blob and alloy_eips::eip4844::c_kzg::Blob have the same memory layout
-            let blob_kzg =
-                unsafe { core::mem::transmute::<&Blob, &alloy_eips::eip4844::c_kzg::Blob>(blob) };
-            let commitment_kzg = unsafe {
-                core::mem::transmute::<&Bytes48, &alloy_eips::eip4844::c_kzg::Bytes48>(commitment)
-            };
-
             // Compute the blob proof
-            let proof = settings.compute_blob_kzg_proof(blob_kzg, commitment_kzg)?;
+            let proof = settings.compute_blob_kzg_proof(blob.as_ckzg(), commitment.as_ckzg())?;
 
-            // SAFETY: same size
-            unsafe {
-                proofs.push(core::mem::transmute::<alloy_eips::eip4844::c_kzg::Bytes48, Bytes48>(
-                    proof.to_bytes(),
-                ));
-            }
+            proofs.push(Bytes48::from_ckzg(proof.to_bytes()));
         }
 
         Ok(BlobsBundleV1 { commitments: self.commitments, proofs, blobs: self.blobs })
